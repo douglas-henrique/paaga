@@ -101,11 +101,15 @@ export default function DepositCalendar({
     );
   };
 
-  const handleDateChange = (value: Date | null) => {
+  const handleDateChange = (value: any) => {
     if (!value) return;
     
-    const dayNumber = getDayNumber(value);
-    if (dayNumber !== null && isDateInChallenge(value)) {
+    // Handle both single date and date range
+    const date = Array.isArray(value) ? value[0] : value;
+    if (!date || !(date instanceof Date)) return;
+    
+    const dayNumber = getDayNumber(date);
+    if (dayNumber !== null && isDateInChallenge(date)) {
       onToggleDeposit(dayNumber);
     }
   };
