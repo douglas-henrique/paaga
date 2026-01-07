@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { requireAuth, verifyOwnership, validationErrorResponse, serverErrorResponse } from '@/lib/auth-helpers';
 import { createChallengeSchema } from '@/lib/validations';
+import { auditLog, getIpAddress } from '@/lib/audit-log';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -100,6 +102,11 @@ export async function POST(request: NextRequest) {
         userId: authenticatedUserId,
       },
     });
+
+    // Log challenge creation
+    const ipAddress = getIpAddress(request);
+    await auditLog.challengeCreated(authenticatedUserId, challenge.id, ipAddress);
+    logger.logChallengeCreation(authenticatedUserId, challenge.id, ipAddress);
 
     // Transform to frontend expected format (snake_case)
     const formattedChallenge = {

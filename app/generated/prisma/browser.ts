@@ -47,3 +47,8 @@ export type Challenge = Prisma.ChallengeModel
  * 
  */
 export type Deposit = Prisma.DepositModel
+/**
+ * Model AuditLog
+ * 
+ */
+export type AuditLog = Prisma.AuditLogModel

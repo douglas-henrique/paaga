@@ -2,6 +2,8 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import prisma from "@/lib/prisma"
 import bcrypt from "bcryptjs"
+import { auditLog, getIpAddress } from "@/lib/audit-log"
+import { logger } from "@/lib/logger"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -11,7 +13,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email", placeholder: "seu@email.com" },
         password: { label: "Senha", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
@@ -28,6 +30,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!user || !user.password) {
           // Don't reveal if user exists or not (security)
+          // Log failed login attempt
+          const ipAddress = getIpAddress(request);
+          await auditLog.loginFailed(email, ipAddress);
+          logger.logFailedLogin(email, ipAddress);
           return null;
         }
 
@@ -37,8 +43,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         );
 
         if (!isValid) {
+          // Log failed login attempt
+          const ipAddress = getIpAddress(request);
+          await auditLog.loginFailed(email, ipAddress);
+          logger.logFailedLogin(email, ipAddress);
           return null;
         }
+
+        // Log successful login
+        const ipAddress = getIpAddress(request);
+        await auditLog.loginSuccess(user.id, ipAddress);
+        logger.logSuccessfulLogin(user.id, email, ipAddress);
 
         return {
           id: user.id,

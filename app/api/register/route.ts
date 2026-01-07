@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { registerSchema, validationErrorResponse, serverErrorResponse } from '@/lib/validations';
+import { sanitizeName } from '@/lib/sanitize';
+import { auditLog, getIpAddress } from '@/lib/audit-log';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Validate data with Zod
+    // Validate data with Zod (includes sanitization)
     const validationResult = registerSchema.safeParse(body);
     if (!validationResult.success) {
       return validationErrorResponse(
@@ -16,6 +19,9 @@ export async function POST(request: NextRequest) {
     }
 
     const { email, password, name } = validationResult.data;
+    
+    // Additional sanitization for name (already done in schema, but ensure it's clean)
+    const sanitizedName = name ? sanitizeName(name) : null;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -34,7 +40,7 @@ export async function POST(request: NextRequest) {
       data: {
         email,
         password: hashedPassword,
-        name: name || null,
+        name: sanitizedName,
       },
       select: {
         id: true,
@@ -43,6 +49,11 @@ export async function POST(request: NextRequest) {
         image: true,
       },
     });
+
+    // Log user registration
+    const ipAddress = getIpAddress(request);
+    await auditLog.userRegistered(user.id, email, ipAddress);
+    logger.logUserRegistration(user.id, email, ipAddress);
 
     return NextResponse.json(
       {

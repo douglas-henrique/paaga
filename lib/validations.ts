@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { NextResponse } from "next/server";
+import { sanitizeName } from "./sanitize";
 
 // Email validation
 export const emailSchema = z.string().email("Email inválido").toLowerCase().trim();
@@ -12,12 +13,18 @@ export const passwordSchema = z
   .regex(/[a-zA-Z]/, "A senha deve conter pelo menos uma letra")
   .regex(/[0-9]/, "A senha deve conter pelo menos um número");
 
-// Name validation
+// Name validation with sanitization
 export const nameSchema = z
   .string()
   .min(2, "O nome deve ter pelo menos 2 caracteres")
   .max(100, "O nome deve ter no máximo 100 caracteres")
-  .trim()
+  .transform((val) => {
+    const sanitized = sanitizeName(val);
+    return sanitized || val.trim();
+  })
+  .refine((val) => val.length >= 2 && val.length <= 100, {
+    message: "O nome deve ter entre 2 e 100 caracteres após sanitização",
+  })
   .optional();
 
 // Registration schema

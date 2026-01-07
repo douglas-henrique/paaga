@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { requireAuth, verifyOwnership, validationErrorResponse, serverErrorResponse, notFoundResponse } from '@/lib/auth-helpers';
+import { auditLog, getIpAddress } from '@/lib/audit-log';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -111,6 +113,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if deposit already exists for this day and update or create
+    const existingDeposit = await prisma.deposit.findUnique({
+      where: {
+        challengeId_dayNumber: {
+          challengeId,
+          dayNumber,
+        },
+      },
+    });
+
+    const isUpdate = !!existingDeposit;
     const deposit = await prisma.deposit.upsert({
       where: {
         challengeId_dayNumber: {
@@ -129,6 +141,18 @@ export async function POST(request: NextRequest) {
         depositedAt: depositDate,
       },
     });
+
+    // Log deposit creation or update
+    const ipAddress = getIpAddress(request);
+    if (isUpdate) {
+      await auditLog.depositUpdated(authenticatedUserId, challengeId, deposit.id, amount, ipAddress);
+    } else {
+      await auditLog.depositCreated(authenticatedUserId, challengeId, deposit.id, amount, ipAddress);
+      // Log large deposits
+      if (amount >= 100) {
+        logger.logLargeDeposit(authenticatedUserId, challengeId, amount, ipAddress);
+      }
+    }
 
     // Transform to frontend expected format (snake_case)
     const formattedDeposit = {

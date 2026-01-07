@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { requireAuth, verifyOwnership, notFoundResponse, serverErrorResponse } from '@/lib/auth-helpers';
+import { auditLog, getIpAddress } from '@/lib/audit-log';
 
 export async function DELETE(
   request: NextRequest,
@@ -34,6 +35,10 @@ export async function DELETE(
         { status: 403 }
       );
     }
+
+    // Log deposit deletion before deleting
+    const ipAddress = getIpAddress(request);
+    await auditLog.depositDeleted(authenticatedUserId, deposit.challengeId, depositId, ipAddress);
 
     await prisma.deposit.delete({
       where: { id: depositId },
