@@ -4,19 +4,21 @@ import { useMemo } from 'react';
 import { addDays, isSameDay, format, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import Calendar from 'react-calendar';
-import { CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface DepositCalendarProps {
   startDate: string;
   depositedDays: number[];
   currentDay: number;
+  loadingDay: number | null;
   onToggleDeposit: (dayNumber: number) => void;
 }
 
 export default function DepositCalendar({
   startDate,
   depositedDays,
+  loadingDay,
   onToggleDeposit,
 }: DepositCalendarProps) {
   const start = useMemo(() => startOfDay(new Date(startDate)), [startDate]);
@@ -66,16 +68,23 @@ export default function DepositCalendar({
     
     const deposited = isDeposited(date);
     const today = isToday(date);
+    const isLoading = loadingDay === dayNumber;
     
     return (
       <div className="relative w-full h-full flex items-center justify-center">
-        {deposited && (
-          <div className="absolute -top-1 -right-1 h-4 w-4 bg-primary rounded-full flex items-center justify-center z-10">
-            <CheckCircle2 className="h-3 w-3 text-white" />
-          </div>
-        )}
-        {!deposited && today && (
-          <span className="absolute -top-1 -right-1 h-3 w-3 bg-primary rounded-full z-10" />
+        {isLoading ? (
+          <Loader2 className="h-4 w-4 text-primary animate-spin z-10" />
+        ) : (
+          <>
+            {deposited && (
+              <div className="absolute -top-1 -right-1 h-4 w-4 bg-primary rounded-full flex items-center justify-center z-10">
+                <CheckCircle2 className="h-3 w-3 text-white" />
+              </div>
+            )}
+            {!deposited && today && (
+              <span className="absolute -top-1 -right-1 h-3 w-3 bg-primary rounded-full z-10" />
+            )}
+          </>
         )}
       </div>
     );
@@ -91,18 +100,20 @@ export default function DepositCalendar({
     const deposited = isDeposited(date);
     const today = isToday(date);
     const inChallenge = isDateInChallenge(date);
+    const isLoading = loadingDay === dayNumber;
     
     return cn(
       'relative rounded-lg transition-all',
       deposited && 'bg-black text-primary-foreground',
       !deposited && inChallenge && 'bg-background border-2 border-border hover:border-primary/50',
       today && !deposited && 'ring-2 ring-primary',
-      !inChallenge && 'opacity-30 cursor-not-allowed'
+      !inChallenge && 'opacity-30 cursor-not-allowed',
+      isLoading && 'opacity-70 cursor-wait'
     );
   };
 
   const handleDateChange = (value: any) => {
-    if (!value) return;
+    if (!value || loadingDay !== null) return;
     
     // Handle both single date and date range
     const date = Array.isArray(value) ? value[0] : value;

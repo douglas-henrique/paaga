@@ -52,6 +52,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [loadingDay, setLoadingDay] = useState<number | null>(null);
   const hasLoadedRef = useRef<string | null>(null);
 
   const userId = session?.user?.id || '';
@@ -157,6 +158,9 @@ export default function Home() {
   const handleToggleDeposit = async (dayNumber: number) => {
     if (!challenge || !userId) return;
 
+    // Set loading state
+    setLoadingDay(dayNumber);
+
     const isDeposited = progress?.depositedDays.includes(dayNumber) || false;
 
     // Optimistic update
@@ -220,6 +224,8 @@ export default function Home() {
         if (challenge) {
           loadProgress(challenge.id);
         }
+        // Clear loading state
+        setLoadingDay(null);
       }, 300);
     } catch {
       // Revert optimistic update on error
@@ -227,6 +233,8 @@ export default function Home() {
         loadProgress(challenge.id);
       }
       setError('Error updating deposit. Please try again.');
+      // Clear loading state on error
+      setLoadingDay(null);
     }
   };
 
@@ -342,6 +350,7 @@ export default function Home() {
                 currentDay={progress.currentDay}
                 selectedDay={selectedDay}
                 depositedDays={progress.depositedDays}
+                loadingDay={loadingDay}
                 onSelectDay={setSelectedDay}
                 onToggleDeposit={handleToggleDeposit}
               />
@@ -373,6 +382,7 @@ export default function Home() {
                   startDate={progress.startDate}
                   depositedDays={progress.depositedDays}
                   currentDay={progress.currentDay}
+                  loadingDay={loadingDay}
                   onToggleDeposit={handleToggleDeposit}
                 />
               </div>
