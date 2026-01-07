@@ -45,11 +45,11 @@ export function sanitizeObject<T extends Record<string, any>>(obj: T): T {
   }
 
   if (typeof obj === 'string') {
-    return sanitizeString(obj) as T;
+    return sanitizeString(obj) as unknown as T;
   }
 
   if (Array.isArray(obj)) {
-    return obj.map((item) => sanitizeObject(item)) as T;
+    return obj.map((item) => sanitizeObject(item)) as unknown as T;
   }
 
   if (typeof obj === 'object') {

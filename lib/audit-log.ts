@@ -53,7 +53,7 @@ export async function createAuditLog(data: AuditLogData): Promise<void> {
         userId: data.userId || null,
         action: data.action,
         ipAddress: data.ipAddress || null,
-        metadata: data.metadata || null,
+        metadata: data.metadata || undefined,
       },
     });
 
